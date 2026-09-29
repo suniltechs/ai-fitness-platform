@@ -77,24 +77,17 @@ This repository is a two-part monorepo. The two folders are **separate Git repos
 
 ## Architecture
 
-```
-┌──────────────────────────────┐        HTTPS / WSS         ┌───────────────────────────────┐
-│  Dynamicfront  (Vite/React)  │  ───────────────────────►  │  Dynamicback  (Express 5)     │
-│                              │                            │                               │
-│  • React Query = server state│  GET/POST/PATCH/DELETE      │  helmet → cors → cookieParser │
-│  • AuthProvider (cookie)     │  /api/v1/*                 │  → morgan → json/urlencoded   │
-│  • ProtectedRoute role gates │  ───────────────────────►  │  → /api/v1 router            │
-│  • socket.io-client          │  Socket.IO (rooms)         │  → verifyToken → requireRole  │
-└──────────────────────────────┘                            │  → validate → controller      │
-                                                            │  → service → Mongoose model  │
-                                                            │                               │
-                                                            │  Socket.IO · Gemini · Cloudinary
-                                                            │  · SendGrid · ExcelJS · cron  │
-                                                            └──────────────┬────────────────┘
-                                                                           │
-                                                              ┌────────────▼─────────────┐
-                                                              │  MongoDB (Atlas/local)   │
-                                                              └──────────────────────────┘
+```mermaid
+flowchart LR
+    frontend["Dynamicfront<br/><small>Vite / React</small><br/><br/>React Query · server state<br/>AuthProvider · HTTP-only cookie<br/>ProtectedRoute · role gates<br/>socket.io-client"]
+
+    backend["Dynamicback<br/><small>Express 5</small><br/><br/>helmet → cors → cookieParser<br/>morgan → json / urlencoded<br/>/api/v1 router<br/>verifyToken → requireRole<br/>validate → controller<br/>service → Mongoose model<br/><br/>Socket.IO · Gemini · Cloudinary<br/>SendGrid · ExcelJS · cron"]
+
+    database[("MongoDB<br/>Atlas / local")]
+
+    frontend -->|"HTTPS<br/>GET · POST · PATCH · DELETE<br/>/api/v1/*"| backend
+    frontend <-->|"WSS<br/>Socket.IO rooms"| backend
+    backend -->|"Mongoose"| database
 ```
 
 **Request flow:** `server.js` → `/api/v1` router → `verifyToken` → `requireRole(...)` → express-validator chain → `validate` → controller (wrapped in `catchAsync`) → service (business logic, aggregation, side effects) → Mongoose model.
